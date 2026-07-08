@@ -62,9 +62,13 @@
 
     <div class="bg-white rounded-xl shadow p-4">
       <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <h2 class="font-bold text-gray-700">Grafik Pemakaian Bulanan (Lembar)</h2>
-        <select id="chartFilmSelect" class="border rounded px-2 py-1 text-sm"></select>
+        <h2 class="font-bold text-gray-700">Grafik Masuk &amp; Keluar Bulanan (Lembar)</h2>
+        <div class="flex gap-2">
+          <select id="chartYearSelect" class="border rounded px-2 py-1 text-sm"></select>
+          <select id="chartFilmSelect" class="border rounded px-2 py-1 text-sm"></select>
+        </div>
       </div>
+      <div id="yearSummary" class="grid grid-cols-2 gap-3 mb-4"></div>
       <canvas id="usageChart" height="90"></canvas>
     </div>
   </section>
@@ -415,27 +419,76 @@ document.getElementById("btnResetFilter").addEventListener("click", ()=>{
 
 // ---------- Chart ----------
 document.getElementById("chartFilmSelect").addEventListener("change", renderChart);
+document.getElementById("chartYearSelect").addEventListener("change", renderChart);
+
+const BULAN_SINGKAT = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+
+function populateYearSelect(){
+  const sel = document.getElementById("chartYearSelect");
+  const years = new Set();
+  Object.values(transaksi).forEach(t=>{
+    if(t.tanggal) years.add(t.tanggal.slice(0,4));
+  });
+  years.add(String(new Date().getFullYear()));
+  const sorted = Array.from(years).sort().reverse();
+  const cur = sel.value;
+  sel.innerHTML = sorted.map(y=>`<option value="${y}">${y}</option>`).join("");
+  if(cur && sorted.includes(cur)) sel.value = cur;
+}
 
 function renderChart(){
   const ctx = document.getElementById("usageChart");
   if(!ctx) return;
+  populateYearSelect();
   const filmSel = document.getElementById("chartFilmSelect").value || "all";
-  const monthly = {}; // {yyyy-mm: total keluar}
+  const tahun = document.getElementById("chartYearSelect").value || String(new Date().getFullYear());
+
+  const masukPerBulan = new Array(12).fill(0);
+  const keluarPerBulan = new Array(12).fill(0);
+  let totalMasukTahun = 0, totalKeluarTahun = 0;
+
   Object.values(transaksi).forEach(t=>{
-    if(t.jenis !== "keluar") return;
     if(filmSel !== "all" && t.filmTypeId !== filmSel) return;
-    const ym = (t.tanggal||"").slice(0,7);
-    if(!ym) return;
-    monthly[ym] = (monthly[ym]||0) + t.jumlah;
+    const ym = t.tanggal || "";
+    if(!ym.startsWith(tahun)) return;
+    const bulanIdx = parseInt(ym.slice(5,7),10) - 1;
+    if(bulanIdx < 0 || bulanIdx > 11) return;
+    if(t.jenis === "masuk"){
+      masukPerBulan[bulanIdx] += t.jumlah;
+      totalMasukTahun += t.jumlah;
+    } else {
+      keluarPerBulan[bulanIdx] += t.jumlah;
+      totalKeluarTahun += t.jumlah;
+    }
   });
-  const labels = Object.keys(monthly).sort();
-  const data = labels.map(l=>monthly[l]);
+
+  // Ringkasan tahunan
+  const summaryEl = document.getElementById("yearSummary");
+  summaryEl.innerHTML = `
+    <div class="rounded-lg bg-teal-50 border border-teal-200 px-4 py-3">
+      <p class="text-xs text-teal-700">Total Masuk (${tahun})</p>
+      <p class="text-2xl font-bold text-teal-700">${fmt(totalMasukTahun)} <span class="text-sm font-normal">lembar</span></p>
+    </div>
+    <div class="rounded-lg bg-orange-50 border border-orange-200 px-4 py-3">
+      <p class="text-xs text-orange-700">Total Keluar (${tahun})</p>
+      <p class="text-2xl font-bold text-orange-700">${fmt(totalKeluarTahun)} <span class="text-sm font-normal">lembar</span></p>
+    </div>`;
 
   if(usageChart) usageChart.destroy();
   usageChart = new Chart(ctx, {
     type: 'bar',
-    data: { labels, datasets: [{ label: 'Pemakaian (lembar)', data, backgroundColor: '#f58320' }] },
-    options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+    data: {
+      labels: BULAN_SINGKAT,
+      datasets: [
+        { label: 'Masuk', data: masukPerBulan, backgroundColor: '#119c9f' },
+        { label: 'Keluar', data: keluarPerBulan, backgroundColor: '#f58320' }
+      ]
+    },
+    options: {
+      responsive:true,
+      plugins:{ legend:{ display:true, position:'top' } },
+      scales:{ y:{ beginAtZero:true, title:{display:true, text:'Lembar'} } }
+    }
   });
 }
 
