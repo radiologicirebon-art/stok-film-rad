@@ -273,15 +273,8 @@
 </footer>
 
 <script>
-/* ============ FIREBASE CONFIG ============
-  // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { getDatabase } from "firebase/database";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// ============ FIREBASE CONFIG ============
+// Menggunakan Firebase compat SDK (sesuai <script> yang di-load di <head>)
 const firebaseConfig = {
   apiKey: "AIzaSyAkqGnGAjGvBrPECHnv93_Wowpb_3CuMw0",
   authDomain: "nyimpen.firebaseapp.com",
@@ -289,13 +282,11 @@ const firebaseConfig = {
   projectId: "nyimpen",
   storageBucket: "nyimpen.firebasestorage.app",
   messagingSenderId: "213474450035",
-  appId: "1:213474450035:web:0b248a0831b3af4193a806",
-  measurementId: "G-99FCDXLENY"
+  appId: "1:213474450035:web:0b248a0831b3af4193a806"
 };
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const db = getDatabase(app);
+// Initialize Firebase (compat style)
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
 let filmTypes = {};   // {id: {nama, isiPerBox, minStok, stokLembar}}
 let transaksi = {};   // {id: {filmTypeId, tanggal, jenis, jumlah, saldoSetelah, keterangan, createdAt}}
